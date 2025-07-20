@@ -1,15 +1,56 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Search, Plus, MapPin, Clock, User } from "lucide-react";
 import { Link } from "react-router-dom";
-import HeaderAfterAuth from "../components/HeaderAfterAuth";
+import Header from "../components/Header";
+
+interface Issues {
+  _id: string;
+  title: string;
+  description: string;
+  type: string;
+  city: string;
+  reportedBy: string;
+  reportedAt: string;
+  image: string;
+  status: string;
+}
 
 const CitizenHome = () => {
   const [searchCity, setSearchCity] = useState("");
 
   // Mock data for issues - in real app this would come from your backend
+  
+  const [reportedIssues, setReportedIssues] = useState<Issues[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchIssues = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/v1/issues", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`, // if token required
+          },
+        });
+
+        const data = await response.json();
+        setReportedIssues(data);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIssues();
+  }, []);
+
+  if (loading) return <p>Loading...</p>;
+
   const mockIssues = [
     {
       id: 1,
@@ -69,10 +110,10 @@ const CitizenHome = () => {
   ];
 
   const filteredIssues = searchCity 
-    ? mockIssues.filter(issue => 
+    ? reportedIssues.filter(issue => 
         issue.city.toLowerCase().includes(searchCity.toLowerCase())
       )
-    : mockIssues;
+    : reportedIssues;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -85,13 +126,28 @@ const CitizenHome = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <HeaderAfterAuth />
+      {/* Navbar */}
+      <Header />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Welcome Section with Profile Link */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Welcome, Citizen!</h1>
+            <p className="text-muted-foreground mt-2">Help improve your community by reporting issues</p>
+          </div>
+          <Link to="/citizen/profile">
+            <Button variant="outline" className="flex items-center space-x-2">
+              <User className="h-4 w-4" />
+              <span>My Profile</span>
+            </Button>
+          </Link>
+        </div>
+
         {/* Search Section */}
-        <div className="mb-8">
+        <div className="my-8">
           <h2 className="text-2xl font-bold text-foreground mb-4">Search Issues by City</h2>
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -123,7 +179,7 @@ const CitizenHome = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[600px] overflow-y-auto">
             {filteredIssues.map((issue) => (
-              <Card key={issue.id} className="hover:shadow-lg transition-shadow duration-200">
+              <Card key={issue._id} className="hover:shadow-lg transition-shadow duration-200">
                 <div className="relative h-48 overflow-hidden rounded-t-lg">
                   <img 
                     src={issue.image}

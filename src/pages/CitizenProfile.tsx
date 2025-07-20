@@ -7,7 +7,7 @@ import { Badge } from "../components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Separator } from "../components/ui/separator";
 import { User, Mail, Phone, MapPin, Calendar, FileText, Edit } from "lucide-react";
-import HeaderAfterAuth from '../components/HeaderAfterAuth';
+import Header from '../components/Header';
 
 const CitizenProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -79,8 +79,8 @@ const CitizenProfile = () => {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* Header */}
-      <HeaderAfterAuth />
+      {/* Navbar */}
+      <Header />
 
       <div className="container mx-auto my-9 max-w-4xl space-y-6 px-4">
         {/* Profile Header */}

@@ -1,6 +1,8 @@
 import { MapPin, Mail, Phone, Github, Linkedin, X } from "lucide-react";
 import { Button } from "../components/ui/button";
 import civicIssueLogo from "../assets/civic-issue.png";
+import { Link } from "react-router-dom";
+import { handleSupportClick } from "./SupportModel";
 
 const Footer = () => {
   return (
@@ -36,9 +38,11 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="text-lg font-semibold text-foreground">Quick Links</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Report Issue</a></li>
+              <li><Link to="/report-issue">
+                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">Report Issue</a>
+              </Link></li>
               <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">View Reports</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">How It Works</a></li>
+              <li><a href="#how-it-works" className="text-muted-foreground hover:text-primary transition-colors">How It Works</a></li>
               <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Community Guidelines</a></li>
             </ul>
           </div>
@@ -50,7 +54,7 @@ const Footer = () => {
               <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Help Center</a></li>
               <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
               <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Contact Us</a></li>
+              <li><a href="#" onClick={handleSupportClick} className="text-muted-foreground hover:text-primary transition-colors">Contact Us</a></li>
             </ul>
           </div>
 
@@ -64,7 +68,7 @@ const Footer = () => {
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">+1 (555) 123-4567</span>
+                <span className="text-muted-foreground">+91 0123456789</span>
               </div>
               <div className="flex items-start space-x-3">
                 <MapPin className="h-4 w-4 text-muted-foreground mt-1" />

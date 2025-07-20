@@ -5,10 +5,12 @@ import IssueTypes from "../components/IssueTypes.tsx";
 import HowItWorks from "../components/HowItWorks.tsx";
 import CTA from "../components/CTA.tsx";
 import Footer from "../components/Footer.tsx";
+import { AuthProvider } from "../contexts/AuthContext.tsx";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
+      <AuthProvider>
       <Header />
       <Hero />
       <Features />
@@ -16,6 +18,7 @@ const Index = () => {
       <HowItWorks />
       <CTA />
       <Footer />
+      </AuthProvider>
     </div>
   )
 }

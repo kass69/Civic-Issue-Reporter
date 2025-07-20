@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { ArrowRight, Shield, Users } from "lucide-react";
+import { handleSupportClick } from "./SupportModel";
 
 const CTA = () => {
   return (
@@ -47,7 +48,7 @@ const CTA = () => {
             <p className="text-white/80 mb-4">
               Questions? Contact our support team
             </p>
-            <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+            <Button variant="outline" onClick={handleSupportClick} className="bg-white/10 border-white/20 text-white hover:bg-white/20">
               Get Support
             </Button>
           </div>

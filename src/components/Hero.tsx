@@ -1,5 +1,6 @@
 import { ArrowRight, Camera, MapPin, Users } from "lucide-react";
 import { Button } from "./ui/button";
+import { Link } from "react-router-dom";
 
 const Hero = () => {
   return (
@@ -28,14 +29,17 @@ const Hero = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                className="civic-gradient border-0 text-white hover:opacity-90 flex items-center space-x-2 cursor-pointer"
-              >
-                <Camera className="h-5 w-5" />
-                <span>Report an Issue</span>
-                <ArrowRight className="h-5 w-5" />
-              </Button>
+              <Link to="/report-issue">
+                <Button
+                  size="lg"
+                  className="civic-gradient border-0 text-white hover:opacity-90 flex items-center space-x-2 cursor-pointer"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span>Report an Issue</span>
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </Link>
+              <Link to="/all-issues">
               <Button
                 variant="outline"
                 size="lg"
@@ -44,6 +48,7 @@ const Hero = () => {
                 <MapPin className="h-5 w-5" />
                 <span>View Reports</span>
               </Button>
+              </Link>
             </div>
 
             {/* Stats */}
