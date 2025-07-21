@@ -12,7 +12,7 @@ const Footer = () => {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="flex items-center justify-center w-8 h-8 p-1 rounded-lg civic-gradient">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg">
                 {/* <MapPin className="h-5 w-5 text-white" /> */}
                 <img src={civicIssueLogo} alt="civicIssueLogo" />
               </div>
@@ -38,9 +38,11 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="text-lg font-semibold text-foreground">Quick Links</h4>
             <ul className="space-y-2">
-              <li><Link to="/report-issue">
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">Report Issue</a>
-              </Link></li>
+              <Link to="/report-issue">
+                <li>
+                  <span className="text-muted-foreground hover:text-primary transition-colors">Report Issue</span>
+                </li>
+              </Link>
               <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">View Reports</a></li>
               <li><a href="#how-it-works" className="text-muted-foreground hover:text-primary transition-colors">How It Works</a></li>
               <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Community Guidelines</a></li>

@@ -5,9 +5,11 @@ import { Label } from "../components/ui/label.tsx";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs.tsx";
 import { Checkbox } from "../components/ui/checkbox.tsx";
-import { MapPin, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import civicIssueLogo from "../assets/civic-issue.png";
+import { BACKEND_URL } from "../config/config.tsx";
 
 const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +27,7 @@ const SignUp = () => {
     email: "",
     phonenumber: "",
     department: "",
-    adminCode: "",
+    adminAccessCode: "",
     password: "",
     confirmPassword: "",
     agreeToTerms: false
@@ -47,7 +49,7 @@ const SignUp = () => {
       return;
     }
     // Registration logic
-    const response = await fetch('http://localhost:5000/api/v1/signup/user', {
+    const response = await fetch(`${BACKEND_URL}/api/v1/signup/citizen`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -93,7 +95,7 @@ const SignUp = () => {
     }
 
     // Registration logic
-    const response = await fetch('http://localhost:5000/api/v1/signup/admin', {
+    const response = await fetch(`${BACKEND_URL}/api/v1/signup/admin`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -104,7 +106,7 @@ const SignUp = () => {
         password: adminForm.password,
         phonenumber: adminForm.phonenumber,
         department: adminForm.department,
-        adminCode: adminForm.adminCode
+        adminAccessCode: Number(adminForm.adminAccessCode)
       }),
     });
     if (response.ok){
@@ -129,8 +131,8 @@ const SignUp = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 mb-4">
-            <div className="flex items-center justify-center w-12 h-12 rounded-lg civic-gradient">
-              <MapPin className="h-6 w-6 text-white" />
+            <div className="flex items-center justify-center w-17 h-17 rounded-lg">
+              <img src={civicIssueLogo} alt="civicIssueLogo" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">CivicReport</h1>
@@ -301,8 +303,8 @@ const SignUp = () => {
                       id="admin-code"
                       type="text"
                       placeholder="Contact your supervisor for the code"
-                      value={adminForm.adminCode}
-                      onChange={(e) => setAdminForm({...adminForm, adminCode: e.target.value})}
+                      value={adminForm.adminAccessCode}
+                      onChange={(e) => setAdminForm({...adminForm, adminAccessCode: e.target.value})}
                       required
                     />
                   </div>

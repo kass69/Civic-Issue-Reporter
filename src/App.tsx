@@ -45,7 +45,7 @@ const App = () => (
               } 
             />
             <Route 
-              path="/report-issue" 
+              path="/citizen/issue" 
               element={
                 <ProtectedRoute requiredRole="citizen">
                   <ReportIssue />
@@ -53,7 +53,7 @@ const App = () => (
               } 
             />
             <Route 
-              path="/citizen/profile" 
+              path="/citizen/profile/:id" 
               element={
                 <ProtectedRoute requiredRole="citizen">
                   <CitizenProfile />

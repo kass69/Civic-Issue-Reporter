@@ -6,21 +6,28 @@ import { Label } from "../components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { ArrowLeft, MapPin, Upload, Send } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import MapComponent from "../components/MapComponent";
+import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
+import { BACKEND_URL } from "../config/config";
 
 const ReportIssue = () => {
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: "",
+    // name: "",
+    // phone: "",
+    // email: "",
     issueDescription: "",
     issueLocation: "",
-    issueType: "road-infrastructure",
+    issueType: "Road Infrastructure",
     latitude: null as number | null,
     longitude: null as number | null,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -37,26 +44,65 @@ const ReportIssue = () => {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    if (file) setSelectedFile(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.issueDescription || !formData.issueLocation || !user) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        toast.error("You must be logged in");
+        return;
+      }
+
+      const data = new FormData();
+      data.append("title", formData.issueDescription.slice(0, 30)); // ✅ Auto-generate title
+      data.append("description", formData.issueDescription);
+      data.append("issueType", formData.issueType);
+      data.append("location", formData.issueLocation);
+      if (formData.latitude) data.append("latitude", formData.latitude.toString());
+      if (formData.longitude) data.append("longitude", formData.longitude.toString());
+      if (selectedFile) data.append("files", selectedFile);
+
+      const response = await fetch(`${BACKEND_URL}/api/v1/citizen/issue/create`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: data, // ✅ multipart/form-data
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        toast.success("Issue reported successfully!");
+        navigate("/citizen"); // ✅ Redirect to dashboard
+        alert("Issue reported successfully!");
+      } else {
+        toast.error(result.message || "Failed to report issue");
+      }
+    } catch (error) {
+      console.error("Error reporting issue:", error);
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Form Data:", formData);
-    console.log("Selected File:", selectedFile);
-    // Here you would typically send the data to your backend
-    alert("Issue reported successfully!");
-  };
-
   const issueTypes = [
-    { value: "road-infrastructure", label: "Road Infrastructure" },
-    { value: "waste-management", label: "Waste Management" },
-    { value: "environmental", label: "Environmental Issues" },
-    { value: "utilities", label: "Utilities & Infrastructure" },
-    { value: "public-safety", label: "Public Safety" },
-    { value: "other", label: "Other" }
+    { value: "Road Infrastructure", label: "Road Infrastructure" },
+    { value: "Waste Management", label: "Waste Management" },
+    { value: "Environmental Issues", label: "Environmental Issues" },
+    { value: "Utilities & Infrastructure", label: "Utilities & Infrastructure" },
+    { value: "Public Safety", label: "Public Safety" },
+    { value: "Other", label: "Other" }
   ];
 
   return (
@@ -118,7 +164,7 @@ const ReportIssue = () => {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Personal Information */}
-                <div className="space-y-4">
+                {/* <div className="space-y-4">
                   <h3 className="text-lg font-medium">Personal Information</h3>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -158,7 +204,7 @@ const ReportIssue = () => {
                       required
                     />
                   </div>
-                </div>
+                </div> */}
 
                 {/* Issue Information */}
                 <div className="space-y-4">
@@ -232,10 +278,10 @@ const ReportIssue = () => {
                 <Button 
                   type="submit" 
                   className="w-full civic-gradient border-0 text-white hover:opacity-90"
+                  disabled={loading}
                   size="lg"
                 >
-                  <Send className="h-5 w-5 mr-2" />
-                  Submit Issue Report
+                {loading ? "Submitting..." : <><Send className="h-5 w-5 mr-2" /> Submit Issue</>}
                 </Button>
               </form>
             </CardContent>

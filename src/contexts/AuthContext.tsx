@@ -1,3 +1,4 @@
+import { BACKEND_URL } from "../config/config";
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
 interface User {
@@ -17,6 +18,7 @@ interface AuthContextType {
   register: (userData: any, role: "citizen" | "admin") => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  updateUserProfile: (updatedData: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,12 +38,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchProfile = async (_userId: string, role: "admin" | "citizen", token: string) => {
+    try {
+      const endpoint = role === "admin" ? `admin` : `citizen`;
+      const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}/issue`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+  
+      const result = await response.json();
+  
+      if (response.ok) {
+        setUser(result);
+        localStorage.setItem("auth_user", JSON.stringify(result));
+      } else {
+        console.error("Failed to fetch profile:", result.message);
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
+  };
+
   useEffect(() => {
     const storedToken = localStorage.getItem("auth_token");
     const storedUser = localStorage.getItem("auth_user");
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    if (storedToken && storedUser && storedUser !== "undefined") {
+      try {
+        setToken(storedToken);
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+
+        // ✅ Fetch fresh user profile from server
+        fetchProfile(parsedUser.id, parsedUser.role, storedToken);
+
+      } catch (error) {
+        console.error("Failed to parse user from localStorage:", error);
+        localStorage.removeItem("auth_user"); // Clean invalid data
+      }
     }
     setIsLoading(false);
   }, []);
@@ -49,40 +81,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string, role: "citizen" | "admin", adminAccessCode?: string) => {
     setIsLoading(true);
     try {
-      const endpoint = role === "admin" ? "signin/admin" : "signin/user";
+      const endpoint = role === "admin" ? "signin/admin" : "signin/citizen";
 
       const body: any = { email, password };
       if (role === "admin" && adminAccessCode) {
         body.adminAccessCode = adminAccessCode;
       }
 
-      const response = await fetch(`http://localhost:5000/api/v1/${endpoint}`, {
+      const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Login failed");
+      console.log("Login API response:", result);
+
+      if (!response.ok || !result.token || !result.user) {
+        console.error("Invalid login response:", result);
+        alert(result.message || "Login failed. Please check your credentials.");
+        return false;
+      }
 
       const authUser: User = {
-        id: result.user?._id,
-        email: result.user?.email,
-        fullName: result.user?.fullName,
-        role,
-        phonenumber: result.user?.phonenumber,
-        department: result.user?.department,
-        adminAccessCode: result.user?.adminAccessCode
+        id: result.user.id,
+        email: result.user.email,
+        fullName: result.user.fullName || "Guest",
+        role: result.user.role,
+        phonenumber: result.user.phonenumber || "",
+        department: result.user.department || "",
+        adminAccessCode: result.user.adminAccessCode || "",
       };
 
       setToken(result.token);
-      setUser(result.user);
+      setUser(authUser);
+
       localStorage.setItem("auth_token", result.token);
-      localStorage.setItem("auth_user", JSON.stringify(result.user));
+      localStorage.setItem("auth_user", JSON.stringify(authUser));
       
+      console.log("Auth User After Login:", authUser);
+
+      return true;
+
     } catch (error) {
       console.error("Login Error:", error);
-      throw error;
+      return false;
 
     } finally {
       setIsLoading(false);
@@ -92,7 +135,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: any, role: "citizen" | "admin") => {
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/signup/${role}`, {
+      const endpoint = role === "admin" ? "signup/admin" : "signup/citizen";
+
+      const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
@@ -101,8 +146,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Registration failed");
 
+      setToken(result.token);
+      setUser(result.user);
+
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("auth_user", JSON.stringify(result.user));
+
       // Optionally log in user after sign-up
-      await login(userData.email, userData.password, role, userData.adminAccessCode);
+      // await login(userData.email, userData.password, role, userData.adminAccessCode);
     } finally {
       setIsLoading(false);
     }
@@ -115,184 +166,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem("auth_user");
   };
 
+  const updateUserProfile = async (updatedData: Partial<User>) => {
+    setIsLoading(true);
+    if (!token || !user) return;
+  
+    try {
+      const endpoint = user.role === "admin" 
+        ? `admin/${user.id}` 
+        : `citizen/${user.id}`;
+  
+      const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedData),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.message || "Profile update failed");
+      }
+  
+      // ✅ Update local state and storage
+      const newUser = { ...user, ...updatedData };
+      setUser(newUser);
+      localStorage.setItem("auth_user", JSON.stringify(newUser));
+  
+      return result;
+
+    } catch (error) {
+      console.error("Update profile error:", error);
+      throw error;
+
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, updateUserProfile, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
 };
-
-
-
-
-
-/*
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  fullName: string;
-  role: 'citizen' | 'admin';
-  phone?: string;
-  department?: string;
-  employeeId?: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  token: string | null;
-  login: (email: string, password: string, role: 'citizen' | 'admin') => Promise<void>;
-  register: (userData: any, role: 'citizen' | 'admin') => Promise<void>;
-  logout: () => void;
-  isLoading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Check for stored token on app load
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
-    
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
-  }, []);
-
-  const login = async (email: string, password: string, role: 'citizen' | 'admin') => {
-    setIsLoading(true);
-    try {
-      // Mock API call - replace with your actual API endpoint
-      const response = await mockLoginAPI(email, password, role);
-      
-      if (response.token && response.user) {
-        setToken(response.token);
-        setUser(response.user);
-        localStorage.setItem('auth_token', response.token);
-        localStorage.setItem('auth_user', JSON.stringify(response.user));
-      }
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const register = async (userData: any, role: 'citizen' | 'admin') => {
-    setIsLoading(true);
-    try {
-      // Mock API call - replace with your actual API endpoint
-      const response = await mockRegisterAPI(userData, role);
-      
-      if (response.token && response.user) {
-        setToken(response.token);
-        setUser(response.user);
-        localStorage.setItem('auth_token', response.token);
-        localStorage.setItem('auth_user', JSON.stringify(response.user));
-      }
-    } catch (error) {
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-  };
-
-  const value = {
-    user,
-    token,
-    login,
-    register,
-    logout,
-    isLoading,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-// Mock API functions - replace with your actual API calls
-const mockLoginAPI = async (email: string, password: string, role: 'citizen' | 'admin') => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Mock validation
-  if (email === 'admin@test.com' && password === 'admin123' && role === 'admin') {
-    return {
-      token: 'mock-jwt-token-admin-' + Date.now(),
-      user: {
-        id: '1',
-        email: 'admin@test.com',
-        firstName: 'Admin',
-        lastName: 'User',
-        role: 'admin' as const,
-        department: 'Public Works',
-        employeeId: 'EMP001'
-      }
-    };
-  } else if (email === 'citizen@test.com' && password === 'citizen123' && role === 'citizen') {
-    return {
-      token: 'mock-jwt-token-citizen-' + Date.now(),
-      user: {
-        id: '2',
-        email: 'citizen@test.com',
-        firstName: 'John',
-        lastName: 'Doe',
-        role: 'citizen' as const,
-        phone: '+1234567890'
-      }
-    };
-  } else {
-    throw new Error('Invalid credentials');
-  }
-};
-
-const mockRegisterAPI = async (userData: any, role: 'citizen' | 'admin') => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Mock user creation
-  const newUser = {
-    id: 'user-' + Date.now(),
-    email: userData.email,
-    firstName: userData.firstName,
-    lastName: userData.lastName,
-    role,
-    phone: userData.phone,
-    ...(role === 'admin' && {
-      department: userData.department,
-      employeeId: userData.employeeId
-    })
-  };
-
-  return {
-    token: `mock-jwt-token-${role}-` + Date.now(),
-    user: newUser
-  };
-};
-*/

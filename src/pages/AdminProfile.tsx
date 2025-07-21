@@ -8,17 +8,44 @@ import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Separator } from "../components/ui/separator";
 import { User, Mail, Phone, MapPin, Calendar, FileText, Edit, Shield, CheckCircle } from "lucide-react";
 import Header from '../components/Header';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { toast } from 'sonner';
 
 const AdminProfile = () => {
+
+  const { user, updateUserProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+
   const [profile, setProfile] = useState({
-    name: "Sarah Johnson",
-    email: "sarah.johnson@citycouncil.gov",
-    phone: "+1 (555) 987-6543",
-    department: "Public Works Department",
-    position: "Senior Administrator",
-    joinDate: "March 2022"
+    fullName: user?.fullName || "",
+    email: user?.email || "",
+    phonenumber: user?.phonenumber || "",
+    department: user?.department || "",
   });
+
+  console.log(profile.department, profile.phonenumber)
+
+  if (!user) {
+    return <p className="text-center mt-10">Loading profile...</p>;
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      await updateUserProfile({
+        fullName: profile.fullName,
+        email: profile.email,
+        phonenumber: profile.phonenumber,
+        department: profile.department,
+      });
+
+      toast.success("Profile updated successfully!");
+      setIsEditing(false);
+      
+    } catch (error) {
+      console.error("Update error:", error);
+      toast.error("Failed to update profile");
+    }
+  };
 
   // Mock responded issues data
   const respondedIssues = [
@@ -94,11 +121,6 @@ const AdminProfile = () => {
     }
   };
 
-  const handleSaveProfile = () => {
-    setIsEditing(false);
-    // Here you would typically save to backend
-  };
-
   return (
     <div className="min-h-screen bg-background">
 
@@ -114,7 +136,7 @@ const AdminProfile = () => {
                 <Avatar className="h-20 w-20">
                   <AvatarImage src="/placeholder.svg" />
                   <AvatarFallback className="text-lg">
-                    {profile.name.split(' ').map(n => n[0]).join('')}
+                    {profile.fullName.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -143,11 +165,11 @@ const AdminProfile = () => {
                   {isEditing ? (
                     <Input
                       id="name"
-                      value={profile.name}
-                      onChange={(e) => setProfile({...profile, name: e.target.value})}
+                      value={profile.fullName}
+                      onChange={(e) => setProfile({...profile, fullName: e.target.value})}
                     />
                   ) : (
-                    <span>{profile.name}</span>
+                    <span>{profile.fullName || "Not Provided"}</span>
                   )}
                 </div>
               </div>
@@ -164,23 +186,23 @@ const AdminProfile = () => {
                       onChange={(e) => setProfile({...profile, email: e.target.value})}
                     />
                   ) : (
-                    <span>{profile.email}</span>
+                    <span>{profile.email || "Not Provided"}</span>
                   )}
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phonenumber">Phone Number</Label>
                 <div className="flex items-center space-x-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   {isEditing ? (
                     <Input
-                      id="phone"
-                      value={profile.phone}
-                      onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                      id="phonenumber"
+                      value={profile.phonenumber}
+                      onChange={(e) => setProfile({...profile, phonenumber: e.target.value})}
                     />
                   ) : (
-                    <span>{profile.phone}</span>
+                    <span>{profile.phonenumber || "Not assigned"}</span>
                   )}
                 </div>
               </div>
@@ -196,12 +218,12 @@ const AdminProfile = () => {
                       onChange={(e) => setProfile({...profile, department: e.target.value})}
                     />
                   ) : (
-                    <span>{profile.department}</span>
+                    <span>{profile.department || "Not assigned"}</span>
                   )}
                 </div>
               </div>
               
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="position">Position</Label>
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-muted-foreground" />
@@ -215,13 +237,13 @@ const AdminProfile = () => {
                     <span>{profile.position}</span>
                   )}
                 </div>
-              </div>
+              </div> */}
             </div>
             
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            {/* <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4" />
               <span>Administrator since {profile.joinDate}</span>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 

@@ -1,84 +1,133 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Separator } from "../components/ui/separator";
-import { User, Mail, Phone, MapPin, Calendar, FileText, Edit } from "lucide-react";
-import Header from '../components/Header';
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  FileText,
+  Edit,
+} from "lucide-react";
+import Header from "../components/Header";
+import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
+import { BACKEND_URL } from "../config/config";
+
+interface Issues {
+  _id: string;
+  title: string;
+  description: string;
+  type: string;
+  city: string;
+  reportedBy: string;
+  reportedAt: string;
+  image: string;
+  status: string;
+}
 
 const CitizenProfile = () => {
+  const { user, updateUserProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+
+  const [myIssues, setMyIssues] = useState<Issues[]>([]);
+  const [loadingMyIssues, setLoadingMyIssues] = useState(true);
+
   const [profile, setProfile] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    address: "123 Main St, Springfield, IL 62701",
-    joinDate: "January 2024"
+    fullName: user?.fullName || "",
+    email: user?.email || "",
+    phonenumber: user?.phonenumber || "",
   });
 
-  // Mock reported issues data
-  const reportedIssues = [
-    {
-      id: 1,
-      title: "Broken streetlight on Oak Avenue",
-      description: "The streetlight has been flickering for weeks and now it's completely out.",
-      status: "In Progress",
-      priority: "Medium",
-      location: "Oak Avenue & 2nd Street",
-      reportDate: "2024-01-15",
-      category: "Infrastructure"
-    },
-    {
-      id: 2,
-      title: "Pothole on Main Street",
-      description: "Large pothole causing damage to vehicles near the intersection.",
-      status: "Resolved",
-      priority: "High",
-      location: "Main Street & 5th Avenue",
-      reportDate: "2024-01-10",
-      category: "Road Maintenance"
-    },
-    {
-      id: 3,
-      title: "Graffiti on public building",
-      description: "Vandalism on the side wall of the community center.",
-      status: "Pending",
-      priority: "Low",
-      location: "Community Center",
-      reportDate: "2024-01-20",
-      category: "Vandalism"
+  if (!user) {
+    return <p className="text-center mt-10">Loading profile...</p>;
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      await updateUserProfile({
+        fullName: profile.fullName,
+        email: profile.email,
+        phonenumber: profile.phonenumber,
+      });
+
+      toast.success("Profile updated successfully!");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Update error:", error);
+      toast.error("Failed to update profile");
     }
-  ];
+  };
+
+  // ✅ Fetch issues reported by this user
+  useEffect(() => {
+    const fetchMyIssues = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/v1/citizen/issue`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        });
+
+        const data = await response.json();
+        if (response.ok && Array.isArray(data.issues)) {
+          setMyIssues(data.issues);
+        } else {
+          console.error("Failed to fetch issues:", data.message);
+          setMyIssues([]);
+        }
+      } catch (error) {
+        console.error("Error fetching my issues:", error);
+        setMyIssues([]);
+      } finally {
+        setLoadingMyIssues(false);
+      }
+    };
+
+    fetchMyIssues();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Resolved": return "bg-green-100 text-green-800";
-      case "In Progress": return "bg-blue-100 text-blue-800";
-      case "Pending": return "bg-yellow-100 text-yellow-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "Open":
+        return "bg-red-100 text-red-800";
+      case "In Progress":
+        return "bg-yellow-100 text-yellow-800";
+      case "Resolved":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
+  
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "High": return "bg-red-100 text-red-800";
-      case "Medium": return "bg-orange-100 text-orange-800";
-      case "Low": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const handleSaveProfile = () => {
-    setIsEditing(false);
-    // Here you would typically save to backend
-  };
+  // const getPriorityColor = (priority: string) => {
+  //   switch (priority) {
+  //     case "High":
+  //       return "bg-red-100 text-red-800";
+  //     case "Medium":
+  //       return "bg-orange-100 text-orange-800";
+  //     case "Low":
+  //       return "bg-green-100 text-green-800";
+  //     default:
+  //       return "bg-gray-100 text-gray-800";
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-background">
-
       {/* Navbar */}
       <Header />
 
@@ -91,17 +140,24 @@ const CitizenProfile = () => {
                 <Avatar className="h-20 w-20">
                   <AvatarImage src="/placeholder.svg" />
                   <AvatarFallback className="text-lg">
-                    {profile.name.split(' ').map(n => n[0]).join('')}
+                    {profile.fullName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <CardTitle className="text-2xl">Citizen Profile</CardTitle>
-                  <CardDescription>Manage your profile and view your reported issues</CardDescription>
+                  <CardDescription>
+                    Manage your profile and view your reported issues
+                  </CardDescription>
                 </div>
               </div>
               <Button
                 variant={isEditing ? "default" : "outline"}
-                onClick={isEditing ? handleSaveProfile : () => setIsEditing(true)}
+                onClick={
+                  isEditing ? handleSaveProfile : () => setIsEditing(true)
+                }
               >
                 <Edit className="h-4 w-4 mr-2" />
                 {isEditing ? "Save Changes" : "Edit Profile"}
@@ -117,15 +173,17 @@ const CitizenProfile = () => {
                   {isEditing ? (
                     <Input
                       id="name"
-                      value={profile.name}
-                      onChange={(e) => setProfile({...profile, name: e.target.value})}
+                      value={profile.fullName}
+                      onChange={(e) =>
+                        setProfile({ ...profile, fullName: e.target.value })
+                      }
                     />
                   ) : (
-                    <span>{profile.name}</span>
+                    <span>{profile.fullName}</span>
                   )}
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="flex items-center space-x-2">
@@ -135,14 +193,16 @@ const CitizenProfile = () => {
                       id="email"
                       type="email"
                       value={profile.email}
-                      onChange={(e) => setProfile({...profile, email: e.target.value})}
+                      onChange={(e) =>
+                        setProfile({ ...profile, email: e.target.value })
+                      }
                     />
                   ) : (
                     <span>{profile.email}</span>
                   )}
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="flex items-center space-x-2">
@@ -150,16 +210,18 @@ const CitizenProfile = () => {
                   {isEditing ? (
                     <Input
                       id="phone"
-                      value={profile.phone}
-                      onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                      value={profile.phonenumber}
+                      onChange={(e) =>
+                        setProfile({ ...profile, phonenumber: e.target.value })
+                      }
                     />
                   ) : (
-                    <span>{profile.phone}</span>
+                    <span>{profile.phonenumber}</span>
                   )}
                 </div>
               </div>
-              
-              <div className="space-y-2">
+
+              {/* <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
                 <div className="flex items-center space-x-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -173,13 +235,13 @@ const CitizenProfile = () => {
                     <span>{profile.address}</span>
                   )}
                 </div>
-              </div>
+              </div> */}
             </div>
-            
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+
+            {/* <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4" />
               <span>Member since {profile.joinDate}</span>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 
@@ -187,14 +249,16 @@ const CitizenProfile = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
-              <div className="text-2xl font-bold">{reportedIssues.length}</div>
-              <p className="text-xs text-muted-foreground">Total Issues Reported</p>
+              <div className="text-2xl font-bold">{myIssues.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Total Issues Reported
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-green-600">
-                {reportedIssues.filter(issue => issue.status === "Resolved").length}
+                {myIssues.filter((issue) => issue.status === "Resolved").length}
               </div>
               <p className="text-xs text-muted-foreground">Resolved</p>
             </CardContent>
@@ -202,7 +266,7 @@ const CitizenProfile = () => {
           <Card>
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-blue-600">
-                {reportedIssues.filter(issue => issue.status === "In Progress").length}
+                {myIssues.filter((issue) => issue.status === "In Progress").length}
               </div>
               <p className="text-xs text-muted-foreground">In Progress</p>
             </CardContent>
@@ -210,7 +274,7 @@ const CitizenProfile = () => {
           <Card>
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-yellow-600">
-                {reportedIssues.filter(issue => issue.status === "Pending").length}
+                {myIssues.filter((issue) => issue.status === "Pending").length}
               </div>
               <p className="text-xs text-muted-foreground">Pending</p>
             </CardContent>
@@ -224,46 +288,61 @@ const CitizenProfile = () => {
               <FileText className="h-5 w-5" />
               <span>My Reported Issues</span>
             </CardTitle>
-            <CardDescription>Track the status of all issues you've reported</CardDescription>
+            <CardDescription>
+              Track the status of all issues you've reported
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {reportedIssues.map((issue) => (
-                <div key={issue.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">{issue.title}</h3>
-                      <p className="text-sm text-muted-foreground">{issue.description}</p>
-                    </div>
-                    <div className="flex space-x-2">
+            {loadingMyIssues ? (
+              <div className="text-center py-6 text-muted-foreground">
+                Loading your issues...
+              </div>
+            ) : myIssues.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                You haven’t reported any issues yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {myIssues.map((issue) => (
+                  <div
+                    key={issue._id}
+                    className="border rounded-lg p-4 space-y-3"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <h3 className="font-semibold">{issue.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {issue.description}
+                        </p>
+                      </div>
                       <Badge className={getStatusColor(issue.status)}>
                         {issue.status}
                       </Badge>
-                      <Badge className={getPriorityColor(issue.priority)}>
-                        {issue.priority}
-                      </Badge>
+                    </div>
+
+                    <Separator />
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span>{issue.city}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>
+                          Reported:{" "}
+                          {new Date(issue.reportedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span>Type: {issue.type}</span>
+                      </div>
                     </div>
                   </div>
-                  
-                  <Separator />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>{issue.location}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>Reported: {issue.reportDate}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span>Category: {issue.category}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Search, Plus, MapPin, Clock, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
-
+import { BACKEND_URL } from "../config/config";
+import { useAuth } from "../contexts/AuthContext";
 interface Issues {
   _id: string;
   title: string;
@@ -19,6 +20,8 @@ interface Issues {
 }
 
 const CitizenHome = () => {
+
+  const { user } = useAuth();
   const [searchCity, setSearchCity] = useState("");
 
   // Mock data for issues - in real app this would come from your backend
@@ -29,85 +32,30 @@ const CitizenHome = () => {
   useEffect(() => {
     const fetchIssues = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/v1/issues", {
-          method: "GET",
+        const response = await fetch(`${BACKEND_URL}/api/v1/all-issues`, {
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("auth_token")}`, // if token required
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
           },
         });
-
         const data = await response.json();
-        setReportedIssues(data);
+        console.log("Fetched Issues:", data);
+  
+        if (Array.isArray(data.issues)) {
+          setReportedIssues(data.issues);
+        } else {
+          setReportedIssues([]);
+        }
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching issues:", error);
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchIssues();
   }, []);
-
-  if (loading) return <p>Loading...</p>;
-
-  const mockIssues = [
-    {
-      id: 1,
-      title: "Large Pothole on Main Street",
-      description: "Deep pothole causing damage to vehicles near the intersection of Main St and Oak Ave.",
-      type: "Road Infrastructure",
-      city: "Springfield",
-      reportedBy: "John D.",
-      reportedAt: "2 hours ago",
-      image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?q=80&w=400&h=250&fit=crop",
-      status: "Open"
-    },
-    {
-      id: 2,
-      title: "Overflowing Garbage Bin",
-      description: "Trash bin at Central Park is overflowing and attracting pests.",
-      type: "Waste Management",
-      city: "Springfield",
-      reportedBy: "Sarah M.",
-      reportedAt: "4 hours ago",
-      image: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=400&h=250&fit=crop",
-      status: "In Progress"
-    },
-    {
-      id: 3,
-      title: "Fallen Tree Branch",
-      description: "Large tree branch has fallen across the sidewalk on Elm Street.",
-      type: "Environmental Issues",
-      city: "Riverside",
-      reportedBy: "Mike R.",
-      reportedAt: "6 hours ago",
-      image: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?q=80&w=400&h=250&fit=crop",
-      status: "Open"
-    },
-    {
-      id: 4,
-      title: "Water Leak",
-      description: "Visible water leak from underground pipe causing flooding.",
-      type: "Utilities & Infrastructure",
-      city: "Springfield",
-      reportedBy: "Lisa K.",
-      reportedAt: "8 hours ago",
-      image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?q=80&w=400&h=250&fit=crop",
-      status: "Resolved"
-    },
-    {
-      id: 5,
-      title: "Broken Streetlight",
-      description: "Streetlight not working on Pine Avenue, creating safety concerns.",
-      type: "Utilities & Infrastructure",
-      city: "Riverside",
-      reportedBy: "Tom H.",
-      reportedAt: "12 hours ago",
-      image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?q=80&w=400&h=250&fit=crop",
-      status: "Open"
-    }
-  ];
+  
+  if (loading) return <div className="flex justify-center items-center h-screen"></div>;
 
   const filteredIssues = searchCity 
     ? reportedIssues.filter(issue => 
@@ -138,7 +86,7 @@ const CitizenHome = () => {
             <h1 className="text-3xl font-bold text-foreground">Welcome, Citizen!</h1>
             <p className="text-muted-foreground mt-2">Help improve your community by reporting issues</p>
           </div>
-          <Link to="/citizen/profile">
+          <Link to={`/citizen/profile/${user?.id}`}>
             <Button variant="outline" className="flex items-center space-x-2">
               <User className="h-4 w-4" />
               <span>My Profile</span>
@@ -182,7 +130,7 @@ const CitizenHome = () => {
               <Card key={issue._id} className="hover:shadow-lg transition-shadow duration-200">
                 <div className="relative h-48 overflow-hidden rounded-t-lg">
                   <img 
-                    src={issue.image}
+                    src={issue.image || "/placeholder.jpg"}
                     alt={issue.title}
                     className="w-full h-full object-cover"
                   />
@@ -226,7 +174,7 @@ const CitizenHome = () => {
 
         {/* Create Issue Button */}
         <div className="fixed bottom-8 right-8">
-          <Link to="/report-issue">
+          <Link to="/citizen/issue">
             <Button 
               size="lg" 
               className="civic-gradient border-0 text-white hover:opacity-90 shadow-lg h-14 px-6 rounded-full"

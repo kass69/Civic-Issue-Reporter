@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { MapPin, Eye, EyeOff } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
+import civicIssueLogo from "../assets/civic-issue.png";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs.tsx";
@@ -26,42 +27,32 @@ const SignIn = () => {
   });
   const navigate = useNavigate();
 
-  const location = useLocation();
   const { login } = useAuth();
-
-  const from = location.state?.from?.pathname || "/";
 
   const handleCitizenSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+
     try {
-      const response = await fetch('http://localhost:5000/api/v1/signin/user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(citizenForm),
-      });
+      const success = await login(citizenForm.email, citizenForm.password, 'citizen');
+      console.log(success)
+      if(success) {
+        toast("Sign In Successful!",{
+          description: "Welcome back, citizen!"
+        });
+  
+        navigate("/citizen");
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Something went wrong');
+      } else {
+        toast.error("Sign In Failed!",{
+          description: "Invalid credentials",
+        });
       }
-
-      // Save token or user data
-      // localStorage.setItem('token', result.token);
-
-      await login(citizenForm.email, citizenForm.password, 'citizen');
-      toast("Sign In Successful",{
-        description: "Welcome back, citizen!"
-      });
-
-      navigate("/citizen");
 
     } catch (error) {
       console.log(error)
-      toast.error("Sign In Failed",{
-        description: "Invalid credentials",
+      toast.error("Sign In Failed!",{
+        description: "Something went wrong",
       });
 
     } finally {
@@ -71,37 +62,35 @@ const SignIn = () => {
 
   const handleAdminSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/v1/signin/admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(adminForm),
-      });
+      const success = await login(adminForm.email, adminForm.password, 'admin', adminForm.adminAccessCode);
 
-      const result = await response.json();
+      if(success) {
+        toast("Admin Sign In Successful!",{
+          description: "Welcome back, administrator!"
+        });
+  
+        console.log("Login successful, navigating...");
+        
+        navigate("/admin");
+  
+        console.log("Success")
 
-      if (!response.ok) {
-        throw new Error(result.message || 'Something went wrong');
+      } else {
+        toast.error("Admin Sign In Failed!",{
+          description: "Invalid credentials",
+        });
       }
-
-      // Save token or user data
-      // localStorage.setItem('token', result.token);
-
-      await login(adminForm.email, adminForm.password, 'admin', adminForm.adminAccessCode);
-      toast("Admin Sign In Successful",{
-        description: "Welcome back, administrator!"
-      });
-      
-      navigate("/admin");
-
     } catch (error) {
+
       console.log(error)
-      toast.error("Admin Sign In Failed",{
-        description: "Invalid credentials",
+      toast.error("Admin Sign In Failed!",{
+        description: "Something went wrong",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -110,8 +99,8 @@ const SignIn = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 mb-4">
-            <div className="flex items-center justify-center w-12 h-12 rounded-lg civic-gradient">
-              <MapPin className="h-6 w-6 text-white" />
+            <div className="flex items-center justify-center w-17 h-17 rounded-lg">
+              <img src={civicIssueLogo} alt="civicIssueLogo" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">CivicReport</h1>
