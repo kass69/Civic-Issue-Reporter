@@ -30,11 +30,10 @@ interface Issues {
   _id: string;
   title: string;
   description: string;
-  type: string;
-  city: string;
-  reportedBy: string;
-  reportedAt: string;
-  image: string;
+  issueType: string;
+  location: string;
+  createdAt: string;
+  file?: string;
   status: string;
 }
 
@@ -75,22 +74,30 @@ const CitizenProfile = () => {
   useEffect(() => {
     const fetchMyIssues = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/v1/citizen/issue`, {
+        const token = localStorage.getItem("auth_token");
+        if (!token) {
+          toast.error("You must be logged in to view issues");
+          return;
+        }
+
+        const response = await fetch(`${BACKEND_URL}/api/v1/citizen/issues`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         });
 
         const data = await response.json();
+
         if (response.ok && Array.isArray(data.issues)) {
           setMyIssues(data.issues);
         } else {
           console.error("Failed to fetch issues:", data.message);
-          setMyIssues([]);
+          toast.error(data.message || "Failed to load issues");
         }
       } catch (error) {
         console.error("Error fetching my issues:", error);
-        setMyIssues([]);
+        toast.error("Error loading your issues");
       } finally {
         setLoadingMyIssues(false);
       }
@@ -111,7 +118,6 @@ const CitizenProfile = () => {
         return "bg-gray-100 text-gray-800";
     }
   };
-  
 
   // const getPriorityColor = (priority: string) => {
   //   switch (priority) {
@@ -266,7 +272,10 @@ const CitizenProfile = () => {
           <Card>
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-blue-600">
-                {myIssues.filter((issue) => issue.status === "In Progress").length}
+                {
+                  myIssues.filter((issue) => issue.status === "In Progress")
+                    .length
+                }
               </div>
               <p className="text-xs text-muted-foreground">In Progress</p>
             </CardContent>
@@ -320,23 +329,31 @@ const CitizenProfile = () => {
                       </Badge>
                     </div>
 
+                    {issue.file && (
+                      <img
+                        src={issue.file}
+                        alt="Issue"
+                        className="w-full h-40 object-cover rounded-md"
+                      />
+                    )}
+
                     <Separator />
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div className="flex items-center space-x-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{issue.city}</span>
+                        <span>{issue.location}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span>
                           Reported:{" "}
-                          {new Date(issue.reportedAt).toLocaleDateString()}
+                          {new Date(issue.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span>Type: {issue.type}</span>
+                        <span>Type: {issue.issueType}</span>
                       </div>
                     </div>
                   </div>

@@ -17,9 +17,7 @@ const ReportIssue = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    // name: "",
-    // phone: "",
-    // email: "",
+    title: "",
     issueDescription: "",
     issueLocation: "",
     issueType: "Road Infrastructure",
@@ -64,7 +62,7 @@ const ReportIssue = () => {
       }
 
       const data = new FormData();
-      data.append("title", formData.issueDescription.slice(0, 30)); // ✅ Auto-generate title
+      data.append("title", formData.title);
       data.append("description", formData.issueDescription);
       data.append("issueType", formData.issueType);
       data.append("location", formData.issueLocation);
@@ -72,7 +70,7 @@ const ReportIssue = () => {
       if (formData.longitude) data.append("longitude", formData.longitude.toString());
       if (selectedFile) data.append("files", selectedFile);
 
-      const response = await fetch(`${BACKEND_URL}/api/v1/citizen/issue/create`, {
+      const response = await fetch(`${BACKEND_URL}/api/v1/citizen/create-issue`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -164,47 +162,21 @@ const ReportIssue = () => {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Personal Information */}
-                {/* <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Personal Information</h3>
+                <div className="space-y-4">
+                  {/* <h3 className="text-lg font-medium">Personal Information</h3> */}
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Full Name *</Label>
+                      <Label htmlFor="title">Issue Title *</Label>
                       <Input
-                        id="name"
+                        id="title"
                         type="text"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
-                        placeholder="Enter your full name"
+                        value={formData.title}
+                        onChange={(e) => handleInputChange("title", e.target.value)}
+                        placeholder="Enter your issue title"
                         required
                       />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number *</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange("phone", e.target.value)}
-                        placeholder="Enter your phone number"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      placeholder="Enter your email address"
-                      required
-                    />
-                  </div>
-                </div> */}
+                </div>
 
                 {/* Issue Information */}
                 <div className="space-y-4">

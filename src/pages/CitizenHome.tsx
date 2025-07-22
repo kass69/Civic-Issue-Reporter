@@ -23,8 +23,6 @@ const CitizenHome = () => {
 
   const { user } = useAuth();
   const [searchCity, setSearchCity] = useState("");
-
-  // Mock data for issues - in real app this would come from your backend
   
   const [reportedIssues, setReportedIssues] = useState<Issues[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +84,7 @@ const CitizenHome = () => {
             <h1 className="text-3xl font-bold text-foreground">Welcome, Citizen!</h1>
             <p className="text-muted-foreground mt-2">Help improve your community by reporting issues</p>
           </div>
-          <Link to={`/citizen/profile/${user?.id}`}>
+          <Link to={`/citizen/profile`}>
             <Button variant="outline" className="flex items-center space-x-2">
               <User className="h-4 w-4" />
               <span>My Profile</span>
@@ -96,7 +94,7 @@ const CitizenHome = () => {
 
         {/* Search Section */}
         <div className="my-8">
-          <h2 className="text-2xl font-bold text-foreground mb-4">Search Issues by City</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-4">Search Issues by Location</h2>
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -174,7 +172,7 @@ const CitizenHome = () => {
 
         {/* Create Issue Button */}
         <div className="fixed bottom-8 right-8">
-          <Link to="/citizen/issue">
+          <Link to="/citizen/create-issue">
             <Button 
               size="lg" 
               className="civic-gradient border-0 text-white hover:opacity-90 shadow-lg h-14 px-6 rounded-full"

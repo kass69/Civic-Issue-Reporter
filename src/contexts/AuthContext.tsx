@@ -38,10 +38,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProfile = async (_userId: string, role: "admin" | "citizen", token: string) => {
+  const fetchProfile = async (userId: string, role: "admin" | "citizen", token: string) => {
     try {
-      const endpoint = role === "admin" ? `admin` : `citizen`;
-      const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}/issue`, {
+      const endpoint = role === "admin" ? `admin/profile` : `citizen/profile`;
+      const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
   
@@ -68,11 +68,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(parsedUser);
 
         // ✅ Fetch fresh user profile from server
-        fetchProfile(parsedUser.id, parsedUser.role, storedToken);
+        fetchProfile(parsedUser.id, parsedUser.role, storedToken).finally(() => {
+          setIsLoading(false);
+        });
 
       } catch (error) {
         console.error("Failed to parse user from localStorage:", error);
-        localStorage.removeItem("auth_user"); // Clean invalid data
+        logout();
+        setIsLoading(false);
       }
     }
     setIsLoading(false);
@@ -81,9 +84,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string, role: "citizen" | "admin", adminAccessCode?: string) => {
     setIsLoading(true);
     try {
-      const endpoint = role === "admin" ? "signin/admin" : "signin/citizen";
+      const endpoint = role === "admin" ? "admin/signin" : "citizen/signin";
 
       const body: any = { email, password };
+
+      if (!email || !password) {
+        alert("Email and password are required.");
+        return false;
+      }
+
+      if (role === "admin" && !adminAccessCode) {
+        alert("Admin access code is required for admin login.");
+        return false;
+      }
+
       if (role === "admin" && adminAccessCode) {
         body.adminAccessCode = adminAccessCode;
       }
@@ -135,7 +149,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: any, role: "citizen" | "admin") => {
     setIsLoading(true);
     try {
-      const endpoint = role === "admin" ? "signup/admin" : "signup/citizen";
+      const endpoint = role === "admin" ? "admin/signup" : "citizen/signup";
 
       const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}`, {
         method: "POST",
@@ -152,8 +166,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem("auth_token", result.token);
       localStorage.setItem("auth_user", JSON.stringify(result.user));
 
-      // Optionally log in user after sign-up
-      // await login(userData.email, userData.password, role, userData.adminAccessCode);
     } finally {
       setIsLoading(false);
     }
@@ -168,12 +180,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateUserProfile = async (updatedData: Partial<User>) => {
     setIsLoading(true);
-    if (!token || !user) return;
-  
     try {
+
+      if (!token || !user) throw new Error("User is not authenticated");
+      const userId = user.id; // Ensure correct key
+
       const endpoint = user.role === "admin" 
-        ? `admin/${user.id}` 
-        : `citizen/${user.id}`;
+        ? `admin/${userId}` 
+        : `citizen/${userId}`;
   
       const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}`, {
         method: "PUT",
