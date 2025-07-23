@@ -6,13 +6,17 @@ import { Search, Plus, MapPin, Clock, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import { BACKEND_URL } from "../config/config";
-import { useAuth } from "../contexts/AuthContext";
+// import { useAuth } from "../contexts/AuthContext";
 interface Issues {
   _id: string;
   title: string;
   description: string;
   type: string;
-  city: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  }
   reportedBy: string;
   reportedAt: string;
   image: string;
@@ -21,7 +25,7 @@ interface Issues {
 
 const CitizenHome = () => {
 
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const [searchCity, setSearchCity] = useState("");
   
   const [reportedIssues, setReportedIssues] = useState<Issues[]>([]);
@@ -57,7 +61,7 @@ const CitizenHome = () => {
 
   const filteredIssues = searchCity 
     ? reportedIssues.filter(issue => 
-        issue.city.toLowerCase().includes(searchCity.toLowerCase())
+        issue.location && issue.location.address && issue.location.address.toLowerCase().includes(searchCity.toLowerCase())
       )
     : reportedIssues;
 
@@ -146,7 +150,7 @@ const CitizenHome = () => {
                   <div className="space-y-2 text-xs text-muted-foreground">
                     <div className="flex items-center space-x-2">
                       <MapPin className="h-3 w-3" />
-                      <span>{issue.city}</span>
+                      <span>{issue.location.address}</span>
                       <span className="font-medium text-primary">• {issue.type}</span>
                     </div>
                     <div className="flex items-center space-x-2">

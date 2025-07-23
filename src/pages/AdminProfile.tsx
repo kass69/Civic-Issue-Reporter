@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -15,6 +15,8 @@ const AdminProfile = () => {
 
   const { user, updateUserProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [ respondedIssues, setRespondedIssues ] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [profile, setProfile] = useState({
     fullName: user?.fullName || "",
@@ -47,61 +49,43 @@ const AdminProfile = () => {
     }
   };
 
-  // Mock responded issues data
-  const respondedIssues = [
-    {
-      id: 1,
-      title: "Broken streetlight on Oak Avenue",
-      description: "The streetlight has been flickering for weeks and now it's completely out.",
-      status: "Resolved",
-      priority: "Medium",
-      location: "Oak Avenue & 2nd Street",
-      reportDate: "2024-01-15",
-      resolvedDate: "2024-01-18",
-      category: "Infrastructure",
-      citizenName: "John Doe",
-      adminResponse: "Streetlight has been repaired and is now functioning properly."
-    },
-    {
-      id: 2,
-      title: "Water main leak on Elm Street",
-      description: "Water bubbling up from the street near residential area.",
-      status: "Resolved",
-      priority: "High",
-      location: "Elm Street & Park Avenue",
-      reportDate: "2024-01-12",
-      resolvedDate: "2024-01-13",
-      category: "Utilities",
-      citizenName: "Mike Wilson",
-      adminResponse: "Emergency repair completed. Water service has been restored."
-    },
-    {
-      id: 3,
-      title: "Traffic signal malfunction",
-      description: "Traffic light stuck on red in all directions causing major delays.",
-      status: "Resolved",
-      priority: "High",
-      location: "Main Street & 1st Avenue",
-      reportDate: "2024-01-08",
-      resolvedDate: "2024-01-09",
-      category: "Traffic",
-      citizenName: "Lisa Chen",
-      adminResponse: "Signal timing has been reset and is operating normally."
-    },
-    {
-      id: 4,
-      title: "Playground equipment damage",
-      description: "Swing set chain broken at Central Park playground.",
-      status: "In Progress",
-      priority: "Medium",
-      location: "Central Park",
-      reportDate: "2024-01-22",
-      resolvedDate: null,
-      category: "Parks & Recreation",
-      citizenName: "David Brown",
-      adminResponse: "Replacement parts have been ordered. Repair scheduled for next week."
+  const fetchHandledIssues = async () => {
+    try {
+      const response = await fetch(`/api/v1/admin/${user.id}/handled-issues`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      const data = await response.json();
+      setRespondedIssues(data.issues);
+    } catch (error) {
+      console.error("Error fetching handled issues:", error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    if (user?.id) fetchHandledIssues();
+  }, [user?.id]);
+
+  // const handleStatusChange = async (issueId: string, newStatus: string) => {
+  //   try {
+  //     await fetch(`/api/v1/admin/issue/${issueId}/status`, {
+  //       method: "PUT",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //       },
+  //       body: JSON.stringify({ status: newStatus }),
+  //     });
+  
+  //     toast.success("Issue status updated!");
+  //     // ✅ Refetch handled issues
+  //     // fetchHandledIssues();
+  //   } catch (error) {
+  //     console.error("Error updating status:", error);
+  //     toast.error("Failed to update status");
+  //   }
+  // };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -112,14 +96,7 @@ const AdminProfile = () => {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "High": return "bg-red-100 text-red-800";
-      case "Medium": return "bg-orange-100 text-orange-800";
-      case "Low": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
+  if (loading) return <p>Loading handled issues...</p>;
 
   return (
     <div className="min-h-screen bg-background">
@@ -222,28 +199,7 @@ const AdminProfile = () => {
                   )}
                 </div>
               </div>
-              
-              {/* <div className="space-y-2">
-                <Label htmlFor="position">Position</Label>
-                <div className="flex items-center space-x-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  {isEditing ? (
-                    <Input
-                      id="position"
-                      value={profile.position}
-                      onChange={(e) => setProfile({...profile, position: e.target.value})}
-                    />
-                  ) : (
-                    <span>{profile.position}</span>
-                  )}
-                </div>
-              </div> */}
             </div>
-            
-            {/* <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>Administrator since {profile.joinDate}</span>
-            </div> */}
           </CardContent>
         </Card>
 
@@ -298,7 +254,10 @@ const AdminProfile = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {respondedIssues.map((issue) => (
+            {respondedIssues.length === 0 ? (
+              <p className="text-center mt-10">You haven't handled any issues yet.</p>
+              ) : (
+              respondedIssues.map((issue) => (
                 <div key={issue.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
@@ -343,7 +302,8 @@ const AdminProfile = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+            )}
             </div>
           </CardContent>
         </Card>
@@ -353,3 +313,59 @@ const AdminProfile = () => {
 };
 
 export default AdminProfile;
+
+
+// const respondedIssues = [
+//   {
+//     id: 1,
+//     title: "Broken streetlight on Oak Avenue",
+//     description: "The streetlight has been flickering for weeks and now it's completely out.",
+//     status: "Resolved",
+//     priority: "Medium",
+//     location: "Oak Avenue & 2nd Street",
+//     reportDate: "2024-01-15",
+//     resolvedDate: "2024-01-18",
+//     category: "Infrastructure",
+//     citizenName: "John Doe",
+//     adminResponse: "Streetlight has been repaired and is now functioning properly."
+//   },
+//   {
+//     id: 2,
+//     title: "Water main leak on Elm Street",
+//     description: "Water bubbling up from the street near residential area.",
+//     status: "Resolved",
+//     priority: "High",
+//     location: "Elm Street & Park Avenue",
+//     reportDate: "2024-01-12",
+//     resolvedDate: "2024-01-13",
+//     category: "Utilities",
+//     citizenName: "Mike Wilson",
+//     adminResponse: "Emergency repair completed. Water service has been restored."
+//   },
+//   {
+//     id: 3,
+//     title: "Traffic signal malfunction",
+//     description: "Traffic light stuck on red in all directions causing major delays.",
+//     status: "Resolved",
+//     priority: "High",
+//     location: "Main Street & 1st Avenue",
+//     reportDate: "2024-01-08",
+//     resolvedDate: "2024-01-09",
+//     category: "Traffic",
+//     citizenName: "Lisa Chen",
+//     adminResponse: "Signal timing has been reset and is operating normally."
+//   },
+//   {
+//     id: 4,
+//     title: "Playground equipment damage",
+//     description: "Swing set chain broken at Central Park playground.",
+//     status: "In Progress",
+//     priority: "Medium",
+//     location: "Central Park",
+//     reportDate: "2024-01-22",
+//     resolvedDate: null,
+//     category: "Parks & Recreation",
+//     citizenName: "David Brown",
+//     adminResponse: "Replacement parts have been ordered. Repair scheduled for next week."
+//   }
+// ];

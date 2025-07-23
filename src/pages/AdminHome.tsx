@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "../components/Header";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -28,69 +28,110 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
+import { BACKEND_URL } from "../config/config";
+// import { useAuth } from "../contexts/AuthContext";
+
+interface Issues {
+  _id: string;
+  title: string;
+  description: string;
+  type: string;
+  location: {
+    address: string;
+    latitude: number;
+    longitude: number;
+  };
+  reportedBy: string;
+  reportedAt: string;
+  image: string;
+  status: string;
+}
 
 const AdminHome = () => {
+
+  // const { token } = useAuth();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
-  const [priorityFilters, setPriorityFilters] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock issue data
-  const [issues, setIssues] = useState([
-    {
-      id: 1,
-      title: "Broken streetlight on Oak Avenue",
-      description:
-        "The streetlight has been flickering for weeks and now it's completely out.",
-      status: "In Progress",
-      priority: "Medium",
-      location: "Oak Avenue & 2nd Street",
-      reportDate: "2024-01-15",
-      category: "Infrastructure",
-    },
-    {
-      id: 2,
-      title: "Pothole on Main Street",
-      description:
-        "Large pothole causing damage to vehicles near the intersection.",
-      status: "Resolved",
-      priority: "High",
-      location: "Main Street & 5th Avenue",
-      reportDate: "2024-01-10",
-      category: "Road Maintenance",
-    },
-    {
-      id: 3,
-      title: "Graffiti on public building",
-      description: "Vandalism on the side wall of the community center.",
-      status: "Pending",
-      priority: "Low",
-      location: "Community Center",
-      reportDate: "2024-01-20",
-      category: "Vandalism",
-    },
-    {
-      id: 4,
-      title: "Damaged traffic sign",
-      description: "Stop sign bent and difficult to see at Elm and Maple.",
-      status: "In Progress",
-      priority: "High",
-      location: "Elm Street & Maple Avenue",
-      reportDate: "2024-01-25",
-      category: "Traffic",
-    },
-    {
-      id: 5,
-      title: "Water leak on Pine Street",
-      description: "Water bubbling up from the street near the fire hydrant.",
-      status: "Resolved",
-      priority: "Medium",
-      location: "Pine Street & 3rd Avenue",
-      reportDate: "2024-01-05",
-      category: "Utilities",
-    },
-  ]);
+  const [issues, setIssues] = useState<Issues[]>([]);
+
+  // ✅ Fetch issues from backend
+  useEffect(() => {
+    const fetchIssues = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/v1/all-issues`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        });
+        const data = await response.json();
+        console.log("Fetched Issues:", data);
+  
+        if (Array.isArray(data.issues)) {
+          setIssues(data.issues);
+        } else {
+          setIssues([]);
+        }
+      } catch (error) {
+        console.error("Error fetching issues:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchIssues();
+  }, []);
+
+  // ✅ Update Issue Status
+  const handleStatusUpdate = async (issueId: string, status: string) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/v1/admin/issue/${issueId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setIssues((prev) => prev.map((i) => (i._id === issueId ? { ...i, status } : i)));
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error("Error updating issue status:", error);
+    }
+  };
+  
+  // delete issue
+  const handleDeleteIssue = async (issueId: string) => {
+    if (!window.confirm("Are you sure you want to delete this issue?")) return;
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/v1/issue/admin/${issueId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+        body: JSON.stringify({ issueId }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setIssues((prev) => prev.filter((i) => i._id !== issueId));
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error("Error deleting issue:", error);
+    }
+  };
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -118,14 +159,12 @@ const AdminHome = () => {
     const searchMatch =
       issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       issue.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      issue.location.toLowerCase().includes(searchQuery.toLowerCase());
+      issue.location.address.toLowerCase().includes(searchQuery.toLowerCase());
 
     const statusMatch =
       statusFilters.length === 0 || statusFilters.includes(issue.status);
-    const priorityMatch =
-      priorityFilters.length === 0 || priorityFilters.includes(issue.priority);
 
-    return searchMatch && statusMatch && priorityMatch;
+    return searchMatch && statusMatch;
   });
 
   const getStatusColor = (status: string) => {
@@ -141,18 +180,13 @@ const AdminHome = () => {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "High":
-        return "bg-red-100 text-red-800";
-      case "Medium":
-        return "bg-orange-100 text-orange-800";
-      case "Low":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-lg text-muted-foreground">Loading issues...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -257,52 +291,6 @@ const AdminHome = () => {
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  Priority <ChevronsUpDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuCheckboxItem
-                  checked={priorityFilters.includes("Low")}
-                  onCheckedChange={(checked) =>
-                    setPriorityFilters((prev) =>
-                      checked
-                        ? [...prev, "Low"]
-                        : prev.filter((p) => p !== "Low")
-                    )
-                  }
-                >
-                  Low
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={priorityFilters.includes("Medium")}
-                  onCheckedChange={(checked) =>
-                    setPriorityFilters((prev) =>
-                      checked
-                        ? [...prev, "Medium"]
-                        : prev.filter((p) => p !== "Medium")
-                    )
-                  }
-                >
-                  Medium
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={priorityFilters.includes("High")}
-                  onCheckedChange={(checked) =>
-                    setPriorityFilters((prev) =>
-                      checked
-                        ? [...prev, "High"]
-                        : prev.filter((p) => p !== "High")
-                    )
-                  }
-                >
-                  High
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 
@@ -357,31 +345,49 @@ const AdminHome = () => {
                       ))}
                   </Button>
                 </TableHead>
-                <TableHead>Priority</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredIssues.map((issue) => (
-                <TableRow key={issue.id}>
+                <TableRow key={issue._id}>
                   <TableCell className="font-medium">{issue.title}</TableCell>
-                  <TableCell>{issue.location}</TableCell>
+                  <TableCell>{issue.location.address}</TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(issue.status)}>
                       {issue.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <Badge className={getPriorityColor(issue.priority)}>
-                      {issue.priority}
-                    </Badge>
-                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
+                    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Edit className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <button
+          onClick={() => handleStatusUpdate(issue._id, "Resolved")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+        >
+          Resolved
+        </button>
+        <button
+          onClick={() => handleStatusUpdate(issue._id, "In Progress")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+        >
+          In Progress
+        </button>
+        <button
+          onClick={() => handleStatusUpdate(issue._id, "Pending")}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+        >
+          Pending
+        </button>
+      </DropdownMenuContent>
+    </DropdownMenu>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteIssue(issue._id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

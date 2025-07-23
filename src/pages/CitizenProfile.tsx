@@ -31,14 +31,18 @@ interface Issues {
   title: string;
   description: string;
   issueType: string;
-  location: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  }
   createdAt: string;
   file?: string;
   status: string;
 }
 
 const CitizenProfile = () => {
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, token, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
   const [myIssues, setMyIssues] = useState<Issues[]>([]);
@@ -49,6 +53,11 @@ const CitizenProfile = () => {
     email: user?.email || "",
     phonenumber: user?.phonenumber || "",
   });
+
+  // Show loading state until AuthContext is ready
+  if (isLoading) {
+    return <p className="text-center mt-10">Loading profile...</p>;
+  }
 
   if (!user) {
     return <p className="text-center mt-10">Loading profile...</p>;
@@ -72,13 +81,11 @@ const CitizenProfile = () => {
 
   // ✅ Fetch issues reported by this user
   useEffect(() => {
+    if (!token) return;
+
     const fetchMyIssues = async () => {
       try {
-        const token = localStorage.getItem("auth_token");
-        if (!token) {
-          toast.error("You must be logged in to view issues");
-          return;
-        }
+        setLoadingMyIssues(true);
 
         const response = await fetch(`${BACKEND_URL}/api/v1/citizen/issues`, {
           headers: {
@@ -88,6 +95,11 @@ const CitizenProfile = () => {
         });
 
         const data = await response.json();
+
+        if (response.status === 401) {
+          toast.error("Unauthorized! Please log in again.");
+          return;
+        }
 
         if (response.ok && Array.isArray(data.issues)) {
           setMyIssues(data.issues);
@@ -104,7 +116,7 @@ const CitizenProfile = () => {
     };
 
     fetchMyIssues();
-  }, []);
+  }, [token]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -118,19 +130,6 @@ const CitizenProfile = () => {
         return "bg-gray-100 text-gray-800";
     }
   };
-
-  // const getPriorityColor = (priority: string) => {
-  //   switch (priority) {
-  //     case "High":
-  //       return "bg-red-100 text-red-800";
-  //     case "Medium":
-  //       return "bg-orange-100 text-orange-800";
-  //     case "Low":
-  //       return "bg-green-100 text-green-800";
-  //     default:
-  //       return "bg-gray-100 text-gray-800";
-  //   }
-  // };
 
   return (
     <div className="min-h-screen bg-background">
@@ -226,28 +225,7 @@ const CitizenProfile = () => {
                   )}
                 </div>
               </div>
-
-              {/* <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  {isEditing ? (
-                    <Input
-                      id="address"
-                      value={profile.address}
-                      onChange={(e) => setProfile({...profile, address: e.target.value})}
-                    />
-                  ) : (
-                    <span>{profile.address}</span>
-                  )}
-                </div>
-              </div> */}
             </div>
-
-            {/* <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>Member since {profile.joinDate}</span>
-            </div> */}
           </CardContent>
         </Card>
 
@@ -342,7 +320,7 @@ const CitizenProfile = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div className="flex items-center space-x-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{issue.location}</span>
+                        <span>{issue.location.address}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
