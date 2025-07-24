@@ -1,8 +1,12 @@
 import { ArrowRight, Camera, MapPin, Users } from "lucide-react";
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const Hero = () => {
+
+  const { user } = useAuth();
+
   return (
     <section className="relative overflow-hidden">
       {/* Background gradient */}
@@ -29,7 +33,7 @@ const Hero = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/report-issue">
+              <Link to={user?.role === 'citizen' ? '/citizen/create-issue' : user?.role === 'admin' ? '/' : '/signin'}>
                 <Button
                   size="lg"
                   className="civic-gradient border-0 text-white hover:opacity-90 flex items-center space-x-2 cursor-pointer"
@@ -39,7 +43,7 @@ const Hero = () => {
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
-              <Link to="/all-issues">
+              <Link to={user?.role === 'citizen' ? '/citizen' : '/admin'}>
               <Button
                 variant="outline"
                 size="lg"

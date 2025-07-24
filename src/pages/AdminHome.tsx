@@ -48,7 +48,6 @@ interface Issues {
 }
 
 const AdminHome = () => {
-
   // const { token } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,7 +69,7 @@ const AdminHome = () => {
         });
         const data = await response.json();
         console.log("Fetched Issues:", data);
-  
+
         if (Array.isArray(data.issues)) {
           setIssues(data.issues);
         } else {
@@ -82,25 +81,30 @@ const AdminHome = () => {
         setLoading(false);
       }
     };
-  
+
     fetchIssues();
   }, []);
 
   // ✅ Update Issue Status
   const handleStatusUpdate = async (issueId: string, status: string) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/v1/admin/issue/${issueId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-        },
-        body: JSON.stringify({ status }),
-      });
+      const response = await fetch(
+        `${BACKEND_URL}/api/v1/admin/issue/${issueId}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
 
       const data = await response.json();
       if (response.ok) {
-        setIssues((prev) => prev.map((i) => (i._id === issueId ? { ...i, status } : i)));
+        setIssues((prev) =>
+          prev.map((i) => (i._id === issueId ? { ...i, status } : i))
+        );
       } else {
         alert(data.message);
       }
@@ -108,19 +112,22 @@ const AdminHome = () => {
       console.error("Error updating issue status:", error);
     }
   };
-  
+
   // delete issue
   const handleDeleteIssue = async (issueId: string) => {
     if (!window.confirm("Are you sure you want to delete this issue?")) return;
     try {
-      const response = await fetch(`${BACKEND_URL}/api/v1/issue/admin/${issueId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-        },
-        body: JSON.stringify({ issueId }),
-      });
+      const response = await fetch(
+        `${BACKEND_URL}/api/v1/issue/admin/${issueId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+          body: JSON.stringify({ issueId }),
+        }
+      );
 
       const data = await response.json();
       if (response.ok) {
@@ -145,8 +152,8 @@ const AdminHome = () => {
   const sortedIssues = [...issues].sort((a, b) => {
     if (!sortColumn) return 0;
 
-    const aValue = a[sortColumn as keyof (typeof a)] as string;
-    const bValue = b[sortColumn as keyof (typeof b)] as string;
+    const aValue = a[sortColumn as keyof typeof a] as string;
+    const bValue = b[sortColumn as keyof typeof b] as string;
 
     if (sortDirection === "asc") {
       return aValue.localeCompare(bValue);
@@ -173,6 +180,8 @@ const AdminHome = () => {
         return "bg-green-100 text-green-800";
       case "In Progress":
         return "bg-blue-100 text-blue-800";
+      case "Rejected":
+        return "bg-red-100 text-red-800";
       case "Pending":
         return "bg-yellow-100 text-yellow-800";
       default:
@@ -231,6 +240,12 @@ const AdminHome = () => {
             </div>
             <p className="text-sm text-muted-foreground">Issues In Progress</p>
           </div>
+          <div className="p-6 rounded-lg border shadow-sm bg-card">
+            <div className="text-2xl font-bold text-yellow-600">
+              {issues.filter((issue) => issue.status === "Pending").length}
+            </div>
+            <p className="text-sm text-muted-foreground">Pending</p>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -254,16 +269,16 @@ const AdminHome = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[200px]">
                 <DropdownMenuCheckboxItem
-                  checked={statusFilters.includes("Pending")}
+                  checked={statusFilters.includes("Rejected")}
                   onCheckedChange={(checked) =>
                     setStatusFilters((prev) =>
                       checked
-                        ? [...prev, "Pending"]
-                        : prev.filter((s) => s !== "Pending")
+                        ? [...prev, "Rejected"]
+                        : prev.filter((s) => s !== "Rejected")
                     )
                   }
                 >
-                  Pending
+                  Rejected
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   checked={statusFilters.includes("In Progress")}
@@ -288,6 +303,18 @@ const AdminHome = () => {
                   }
                 >
                   Resolved
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={statusFilters.includes("Pending")}
+                  onCheckedChange={(checked) =>
+                    setStatusFilters((prev) =>
+                      checked
+                        ? [...prev, "Pending"]
+                        : prev.filter((s) => s !== "Pending")
+                    )
+                  }
+                >
+                  Pending
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -360,34 +387,52 @@ const AdminHome = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Edit className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <button
-          onClick={() => handleStatusUpdate(issue._id, "Resolved")}
-          className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-        >
-          Resolved
-        </button>
-        <button
-          onClick={() => handleStatusUpdate(issue._id, "In Progress")}
-          className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-        >
-          In Progress
-        </button>
-        <button
-          onClick={() => handleStatusUpdate(issue._id, "Pending")}
-          className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-        >
-          Pending
-        </button>
-      </DropdownMenuContent>
-    </DropdownMenu>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteIssue(issue._id)}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <button
+                            onClick={() =>
+                              handleStatusUpdate(issue._id, "Resolved")
+                            }
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                          >
+                            Resolved
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleStatusUpdate(issue._id, "In Progress")
+                            }
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                          >
+                            In Progress
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleStatusUpdate(issue._id, "Rejected")
+                            }
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                          >
+                            Rejected
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleStatusUpdate(issue._id, "Pending")
+                            }
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                          >
+                            Pending
+                          </button>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteIssue(issue._id)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

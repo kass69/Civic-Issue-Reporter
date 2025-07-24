@@ -49,7 +49,7 @@ const SignUp = () => {
       return;
     }
     // Registration logic
-    const response = await fetch(`${BACKEND_URL}/api/v1/signup/citizen`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/citizen/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ const SignUp = () => {
     }
 
     // Registration logic
-    const response = await fetch(`${BACKEND_URL}/api/v1/signup/admin`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/admin/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

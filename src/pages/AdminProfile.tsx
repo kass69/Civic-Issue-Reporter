@@ -10,13 +10,31 @@ import { User, Mail, Phone, MapPin, Calendar, FileText, Edit, Shield, CheckCircl
 import Header from '../components/Header';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { toast } from 'sonner';
+import { BACKEND_URL } from '../config/config.tsx';
+
+interface Issues {
+  _id: string;
+  title: string;
+  description: string;
+  issueType: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  }
+  createdAt: string;
+  file?: string;
+  status: string;
+}
 
 const AdminProfile = () => {
 
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, token, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [ respondedIssues, setRespondedIssues ] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [ respondedIssues, setRespondedIssues ] = useState<Issues[]>([]);
+  // const [loading, setLoading] = useState(true);
+  const [loadingMyIssues, setLoadingMyIssues] = useState(true);
+  // const [myIssues, setMyIssues] = useState<Issues[]>([]);
 
   const [profile, setProfile] = useState({
     fullName: user?.fullName || "",
@@ -25,7 +43,9 @@ const AdminProfile = () => {
     department: user?.department || "",
   });
 
-  console.log(profile.department, profile.phonenumber)
+  if (isLoading) {
+    return <p className="text-center mt-10">Loading profile...</p>;
+  }
 
   if (!user) {
     return <p className="text-center mt-10">Loading profile...</p>;
@@ -49,23 +69,61 @@ const AdminProfile = () => {
     }
   };
 
-  const fetchHandledIssues = async () => {
-    try {
-      const response = await fetch(`/api/v1/admin/${user.id}/handled-issues`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const data = await response.json();
-      setRespondedIssues(data.issues);
-    } catch (error) {
-      console.error("Error fetching handled issues:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const fetchHandledIssues = async () => {
+  //   try {
+  //     const response = await fetch(`/api/v1/admin/${user.id}/handled-issues`, {
+  //       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  //     });
+  //     const data = await response.json();
+  //     setRespondedIssues(data.issues);
+  //   } catch (error) {
+  //     console.error("Error fetching handled issues:", error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  useEffect(() => {
-    if (user?.id) fetchHandledIssues();
-  }, [user?.id]);
+  // useEffect(() => {
+  //   if (user?.id) fetchHandledIssues();
+  // }, [user?.id]);
+
+    useEffect(() => {
+      if (!token) return;
+  
+      const fetchMyIssues = async () => {
+        try {
+          setLoadingMyIssues(true);
+  
+          const response = await fetch(`${BACKEND_URL}/api/v1/admin/:id/handled-issues`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+  
+          const data = await response.json();
+  
+          if (response.status === 401) {
+            toast.error("Unauthorized! Please log in again.");
+            return;
+          }
+  
+          if (response.ok && Array.isArray(data.issues)) {
+            setRespondedIssues(data.issues);
+          } else {
+            console.error("Failed to fetch issues:", data.message);
+            toast.error(data.message || "Failed to load issues");
+          }
+        } catch (error) {
+          console.error("Error fetching my issues:", error);
+          toast.error("Error loading your issues");
+        } finally {
+          setLoadingMyIssues(false);
+        }
+      };
+  
+      fetchMyIssues();
+    }, [token]);
 
   // const handleStatusChange = async (issueId: string, newStatus: string) => {
   //   try {
@@ -96,7 +154,7 @@ const AdminProfile = () => {
     }
   };
 
-  if (loading) return <p>Loading handled issues...</p>;
+  if (loadingMyIssues) return <p>Loading handled issues...</p>;
 
   return (
     <div className="min-h-screen bg-background">

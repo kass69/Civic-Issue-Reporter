@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -12,13 +12,12 @@ import {
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { ArrowLeft, MapPin, Upload, Send } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import MapComponent from "../components/MapComponent";
-import { useAuth } from "../contexts/AuthContext";
+import MapComponent from "../components/MapBox";
 import { toast } from "sonner";
 import { BACKEND_URL } from "../config/config";
 
 const ReportIssue = () => {
-  const { user } = useAuth();
+
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: "",
@@ -38,7 +37,7 @@ const ReportIssue = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleLocationSelect = (lat: number, lng: number, address: string) => {
+  const handleLocationSelect = useCallback((lat: number, lng: number, address: string) => {
     setFormData((prev) => ({
       ...prev,
       location: {
@@ -46,8 +45,9 @@ const ReportIssue = () => {
         latitude: lat,
         longitude: lng,
       },
+      issueLocation: address, // also update address string if you use it
     }));
-  };
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

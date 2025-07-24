@@ -38,11 +38,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProfile = async (userId: string, role: "admin" | "citizen", token: string) => {
+  const fetchProfile = async () => {
     try {
-      const endpoint = role === "admin" ? `admin/profile` : `citizen/profile`;
-      const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const token = localStorage.getItem("auth_token");
+      const storedUser = localStorage.getItem("auth_user");
+      const storedRole = localStorage.getItem("auth_role");
+      const storedUserId = localStorage.getItem("auth_user_id");
+  
+      if (!token || !storedRole || !storedUserId) {
+        console.warn("Missing token or user info in localStorage");
+        return;
+      }
+  
+      const endpoint =
+        storedRole === "admin"
+          ? `admin/profile/${storedUserId}`
+          : `citizen/profile/${storedUserId}`;
+  
+      const response = await fetch(`${BACKEND_URL}/api/v1/${endpoint}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
   
       const result = await response.json();
@@ -57,7 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error("Error fetching profile:", error);
     }
   };
-
+  
   useEffect(() => {
     const storedToken = localStorage.getItem("auth_token");
     const storedUser = localStorage.getItem("auth_user");
